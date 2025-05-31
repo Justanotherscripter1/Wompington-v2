@@ -1,14 +1,26 @@
--- ESP Module
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 
-local BOX_COLOR = Color3.fromRGB(255, 0, 0) 
+local BOX_COLOR = Color3.fromRGB(255, 0, 0)
 local BOX_THICKNESS = 2
 local SCALE_CONST = 2000
 
 local boxes = {}
-local connection
+local healthBars = {}
+local nameTags = {}
+local teamTags = {}
+local distanceTexts = {}
+
+-- Toggles (start enabled or disabled)
+local showHealthBar = true
+local showNameTag = true
+local showTeamTag = true
+local showDistance = true
+
+local function clamp(v, min, max)
+    return math.max(min, math.min(max, v))
+end
 
 local function newBox()
     local box = Drawing.new("Square")
@@ -19,83 +31,147 @@ local function newBox()
     return box
 end
 
-local function getBox(plr)
-    boxes[plr] = boxes[plr] or newBox()
-    return boxes[plr]
+local function newHealthBar()
+    local bar = Drawing.new("Square")
+    bar.Visible = false
+    bar.Color = Color3.fromRGB(0, 255, 0)
+    bar.Filled = true
+    return bar
 end
 
-local function clamp(v, mi, ma)
-    return v < mi and mi or (v > ma and ma or v)
+local function newText()
+    local txt = Drawing.new("Text")
+    txt.Visible = false
+    txt.Center = true
+    txt.Outline = true
+    txt.OutlineColor = Color3.new(0, 0, 0)
+    txt.Font = 2
+    txt.Size = 16
+    return txt
 end
 
-local function addPlayer(plr)
-    if plr ~= Players.LocalPlayer and not boxes[plr] then
-        boxes[plr] = newBox()
+local function getOrCreate(t, plr, newFunc)
+    if not t[plr] then
+        t[plr] = newFunc()
+    end
+    return t[plr]
+end
+
+local function getHealth(plr)
+    local char = plr.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then return hum.Health, hum.MaxHealth end
+    end
+    return 0, 100
+end
+
+local function getTeamColor(plr)
+    if plr.Team then
+        return plr.TeamColor.Color
+    else
+        return Color3.fromRGB(255, 255, 255)
     end
 end
 
-local function removePlayer(plr)
-    if boxes[plr] then
-        boxes[plr]:Remove()
-        boxes[plr] = nil
-    end
-end
-
-local function renderESP()
+RunService.RenderStepped:Connect(function()
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= Players.LocalPlayer then
             local char = plr.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            local box = getBox(plr)
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            local box = getOrCreate(boxes, plr, newBox)
+            local healthBar = getOrCreate(healthBars, plr, newHealthBar)
+            local nameTag = getOrCreate(nameTags, plr, newText)
+            local teamTag = getOrCreate(teamTags, plr, newText)
+            local distanceText = getOrCreate(distanceTexts, plr, newText)
+
             if hrp and Camera then
                 local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
                 if onScreen then
+                    -- box
                     local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
                     local width = clamp(SCALE_CONST / dist, 50, 500)
                     local height = clamp(width * 2, 100, 1000)
+
                     box.Size = Vector2.new(width, height)
                     box.Position = Vector2.new(screenPos.X - width / 2, screenPos.Y - height / 2)
                     box.Visible = true
+
+                    -- health bar (vertical on left side)
+                    if showHealthBar and hum then
+                        local health, maxHealth = hum.Health, hum.MaxHealth
+                        local healthRatio = clamp(health / maxHealth, 0, 1)
+                        local barHeight = height * healthRatio
+
+                        healthBar.Size = Vector2.new(6, barHeight)
+                        healthBar.Position = Vector2.new(box.Position.X - 8, box.Position.Y + height - barHeight)
+                        healthBar.Color = Color3.fromRGB(0, 255 * healthRatio, 0)
+                        healthBar.Visible = true
+                    else
+                        healthBar.Visible = false
+                    end
+
+                    -- name tag (above box)
+                    if showNameTag then
+                        nameTag.Text = plr.Name
+                        nameTag.Position = Vector2.new(screenPos.X, box.Position.Y - 20)
+                        nameTag.Color = Color3.fromRGB(255, 255, 255)
+                        nameTag.Visible = true
+                    else
+                        nameTag.Visible = false
+                    end
+
+                    -- team tag (above name tag, colored)
+                    if showTeamTag and plr.Team then
+                        teamTag.Text = plr.Team.Name
+                        teamTag.Position = Vector2.new(screenPos.X, box.Position.Y - 38)
+                        teamTag.Color = getTeamColor(plr)
+                        teamTag.Visible = true
+                    else
+                        teamTag.Visible = false
+                    end
+
+                    -- distance text (below box)
+                    if showDistance then
+                        distanceText.Text = string.format("%.0f studs", dist)
+                        distanceText.Position = Vector2.new(screenPos.X, box.Position.Y + height + 5)
+                        distanceText.Color = Color3.fromRGB(255, 255, 255)
+                        distanceText.Visible = true
+                    else
+                        distanceText.Visible = false
+                    end
+
                 else
+                    -- not on screen, hide everything
                     box.Visible = false
+                    healthBar.Visible = false
+                    nameTag.Visible = false
+                    teamTag.Visible = false
+                    distanceText.Visible = false
                 end
             else
                 box.Visible = false
+                healthBar.Visible = false
+                nameTag.Visible = false
+                teamTag.Visible = false
+                distanceText.Visible = false
             end
         end
     end
+end)
+
+-- Toggle functions you can call from your UI:
+
+function ESPSetHealthBar(bool)
+    showHealthBar = bool
 end
-
-local function Enable()
-    for _, plr in ipairs(Players:GetPlayers()) do
-        addPlayer(plr)
-    end
-    Players.PlayerAdded:Connect(addPlayer)
-    Players.PlayerRemoving:Connect(removePlayer)
-    connection = RunService.RenderStepped:Connect(renderESP)
+function ESPSetNameTag(bool)
+    showNameTag = bool
 end
-
-local function Disable()
-    if connection then
-        connection:Disconnect()
-        connection = nil
-    end
-    for _, box in pairs(boxes) do
-        box:Remove()
-    end
-    boxes = {}
+function ESPSetTeamTag(bool)
+    showTeamTag = bool
 end
-
-local function SetColor(color)
-    BOX_COLOR = color
-    for _, box in pairs(boxes) do
-        box.Color = BOX_COLOR
-    end
+function ESPSetDistance(bool)
+    showDistance = bool
 end
-
-
-return {
-    Enable = Enable,
-    Disable = Disable,
-    SetColor = SetColor
-}
