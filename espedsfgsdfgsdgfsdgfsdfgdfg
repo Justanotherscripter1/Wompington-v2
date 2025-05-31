@@ -175,3 +175,4 @@ end
 function ESPSetDistance(bool)
     showDistance = bool
 end
+disable()
