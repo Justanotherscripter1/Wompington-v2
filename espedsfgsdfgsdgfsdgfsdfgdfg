@@ -95,81 +95,59 @@ local function renderESP()
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= Players.LocalPlayer then
             local char = plr.Character
-            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
-            local hum  = char and char:FindFirstChildOfClass("Humanoid")
-            local entry = getEntry(plr)
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+            local box = getBox(plr)
+            local data = playerData[plr] or {}
 
             if hrp and Camera then
-                local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
                 if onScreen then
-                    local distance = (Camera.CFrame.Position - hrp.Position).Magnitude
-                    local width  = clamp(SCALE_CONST / distance, 50, 500)
+                    local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
+                    local width = clamp(SCALE_CONST / dist, 50, 500)
                     local height = clamp(width * 2, 100, 1000)
+                    box.Size = Vector2.new(width, height)
+                    box.Position = Vector2.new(screenPos.X - width / 2, screenPos.Y - height / 2)
+                    box.Visible = true
 
-                    -----------------------------------------------------------------
-                    -- Box
-                    -----------------------------------------------------------------
-                    if settings.ShowBoxes then
-                        entry.Box.Size     = Vector2.new(width, height)
-                        entry.Box.Position = Vector2.new(pos.X - width/2, pos.Y - height/2)
-                        entry.Box.Color    = BOX_COLOR
-                        entry.Box.Visible  = true
-                    else
-                        entry.Box.Visible = false
+                    if showHealthbar and humanoid then
+                        data.healthbar.Size = Vector2.new(4, height * (humanoid.Health / humanoid.MaxHealth))
+                        data.healthbar.Position = Vector2.new(box.Position.X - 6, box.Position.Y + (height - data.healthbar.Size.Y))
+                        data.healthbar.Visible = true
                     end
 
-                    -----------------------------------------------------------------
-                    -- Health bar (left side of box)
-                    -----------------------------------------------------------------
-                    if settings.ShowHealth and hum then
-                        local hpRatio = clamp(hum.Health / hum.MaxHealth, 0, 1)
-
-                        -- Outline
-                        entry.HealthOutline.Size     = Vector2.new(4, height)
-                        entry.HealthOutline.Position = Vector2.new(pos.X - width/2 - 6, pos.Y - height/2)
-                        entry.HealthOutline.Filled   = false
-                        entry.HealthOutline.Color    = Color3.new(0,0,0)
-                        entry.HealthOutline.Visible  = true
-
-                        -- Fill
-                        entry.HealthFill.Size        = Vector2.new(4, height * hpRatio)
-                        entry.HealthFill.Position    = Vector2.new(pos.X - width/2 - 6, pos.Y + height/2 - height * hpRatio)
-                        entry.HealthFill.Filled      = true
-                        entry.HealthFill.Color       = Color3.fromRGB(255*(1-hpRatio),255*hpRatio,0)
-                        entry.HealthFill.Visible     = true
-                    else
-                        entry.HealthOutline.Visible = false
-                        entry.HealthFill.Visible    = false
+                    if showNameTag then
+                        data.name.Text = plr.Name
+                        data.name.Position = Vector2.new(screenPos.X, screenPos.Y - height / 2 - 16)
+                        data.name.Visible = true
                     end
 
-                    -----------------------------------------------------------------
-                    -- Name & tags
-                    -----------------------------------------------------------------
-                    if settings.ShowNames or settings.ShowTeam or settings.ShowDistance then
-                        local nameStr = ""
-                        if settings.ShowNames then nameStr = plr.Name end
-                        if settings.ShowTeam and plr.Team then
-                            nameStr = nameStr .. (nameStr ~= "" and " | " or "") .. plr.Team.Name
-                        end
-                        if settings.ShowDistance then
-                            nameStr = nameStr .. (nameStr ~= "" and " | " or "") .. string.format("%dm", distance//1)
-                        end
-                        entry.Name.Text     = nameStr
-                        entry.Name.Position = Vector2.new(pos.X, pos.Y - height/2 - 16)
-                        entry.Name.Visible  = nameStr ~= ""
-                    else
-                        entry.Name.Visible = false
+                    if showTeamTag then
+                        data.team.Text = tostring(plr.Team)
+                        data.team.Position = Vector2.new(screenPos.X, screenPos.Y + height / 2)
+                        data.team.Visible = true
                     end
 
-                else -- not on screen
-                    for _,obj in pairs(entry) do obj.Visible = false end
+                    if showDistance then
+                        data.distance.Text = tostring(math.floor(dist)) .. "m"
+                        data.distance.Position = Vector2.new(screenPos.X, screenPos.Y + height / 2 + 12)
+                        data.distance.Visible = true
+                    end
+
+                else
+                    box.Visible = false
+                    if data.healthbar then data.healthbar.Visible = false end
+                    if data.name then data.name.Visible = false end
+                    if data.team then data.team.Visible = false end
+                    if data.distance then data.distance.Visible = false end
                 end
-            else -- no hrp
-                for _,obj in pairs(entry) do obj.Visible = false end
+            else
+                box.Visible = false
             end
         end
     end
 end
+
 
 ---------------------------------------------------------------------
 --\ Public API //
