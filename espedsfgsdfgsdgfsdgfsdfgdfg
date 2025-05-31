@@ -160,6 +160,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
+disable()
 
 -- Toggle functions you can call from your UI:
 
@@ -175,4 +176,3 @@ end
 function ESPSetDistance(bool)
     showDistance = bool
 end
-disable()
