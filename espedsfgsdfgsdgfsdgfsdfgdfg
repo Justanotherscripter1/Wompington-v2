@@ -86,12 +86,16 @@ local function Disable()
     boxes = {}
 end
 
-local function SetScaleConstant(value)
-    SCALE_CONST = value
+local function SetColor(color)
+    BOX_COLOR = color
+    for _, box in pairs(boxes) do
+        box.Color = BOX_COLOR
+    end
 end
+
 
 return {
     Enable = Enable,
     Disable = Disable,
-    SetScaleConstant = SetScaleConstant
+    SetColor = SetColor
 }
