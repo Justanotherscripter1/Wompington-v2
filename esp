@@ -1,39 +1,21 @@
---[[
-ESP Base – Box Edition 🟥
+-- ESP Module
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
 
-• Boxes scale with distance (closer = chonkier)
-• Width-to-height ratio locked at 1:2
-• Clamped size: 50×100 → 500×1000 px
-• Uses Synapse/Fluxus-style Drawing API
+local BOX_COLOR = Color3.fromRGB(255, 0, 0)
+local BOX_THICKNESS = 2
+local SCALE_CONST = 2000
 
-Drop it in, tweak the constant if you want different mojo.
-]]
-
---------------------------
---  Service Shortcuts   --
---------------------------
-local Players     = game:GetService("Players")
-local RunService  = game:GetService("RunService")
-local Camera      = workspace.CurrentCamera
-
---------------------------
---  Config Knobs       --
---------------------------
-local BOX_COLOR     = Color3.fromRGB(255, 0, 0) -- spicy red
-local BOX_THICKNESS = 2                         -- outline beefiness
-local SCALE_CONST   = 2000                      -- bigger = chunkier close-ups
-
---------------------------
---  Internals          --
---------------------------
-local boxes = {} -- [player] = Drawing square
+local boxes = {}
+local connection
 
 local function newBox()
     local box = Drawing.new("Square")
-    box.Visible   = false
-    box.Color     = BOX_COLOR
+    box.Visible = false
+    box.Color = BOX_COLOR
     box.Thickness = BOX_THICKNESS
-    box.Filled    = false
+    box.Filled = false
     return box
 end
 
@@ -46,41 +28,34 @@ local function clamp(v, mi, ma)
     return v < mi and mi or (v > ma and ma or v)
 end
 
---------------------------
---  Player Adder        --
---------------------------
 local function addPlayer(plr)
     if plr ~= Players.LocalPlayer and not boxes[plr] then
         boxes[plr] = newBox()
     end
 end
 
-for _, plr in ipairs(Players:GetPlayers()) do
-    addPlayer(plr)
+local function removePlayer(plr)
+    if boxes[plr] then
+        boxes[plr]:Remove()
+        boxes[plr] = nil
+    end
 end
 
-Players.PlayerAdded:Connect(addPlayer)
-
---------------------------
---  Main Render Loop    --
---------------------------
-RunService.RenderStepped:Connect(function()
+local function renderESP()
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= Players.LocalPlayer then
             local char = plr.Character
-            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
-            local box  = getBox(plr)
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local box = getBox(plr)
             if hrp and Camera then
                 local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
                 if onScreen then
-                    local dist   = (Camera.CFrame.Position - hrp.Position).Magnitude
-                    local width  = clamp(SCALE_CONST / dist, 50, 500)
-                    local height = clamp(width * 2,        100, 1000)
-
-                    box.Size     = Vector2.new(width, height)
-                    box.Position = Vector2.new(screenPos.X - width  / 2,
-                                               screenPos.Y - height / 2)
-                    box.Visible  = true
+                    local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
+                    local width = clamp(SCALE_CONST / dist, 50, 500)
+                    local height = clamp(width * 2, 100, 1000)
+                    box.Size = Vector2.new(width, height)
+                    box.Position = Vector2.new(screenPos.X - width / 2, screenPos.Y - height / 2)
+                    box.Visible = true
                 else
                     box.Visible = false
                 end
@@ -89,14 +64,34 @@ RunService.RenderStepped:Connect(function()
             end
         end
     end
-end)
+end
 
---------------------------
---  Garbage Collection  --
---------------------------
-Players.PlayerRemoving:Connect(function(plr)
-    if boxes[plr] then
-        boxes[plr]:Remove()
-        boxes[plr] = nil
+local function Enable()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        addPlayer(plr)
     end
-end)
+    Players.PlayerAdded:Connect(addPlayer)
+    Players.PlayerRemoving:Connect(removePlayer)
+    connection = RunService.RenderStepped:Connect(renderESP)
+end
+
+local function Disable()
+    if connection then
+        connection:Disconnect()
+        connection = nil
+    end
+    for _, box in pairs(boxes) do
+        box:Remove()
+    end
+    boxes = {}
+end
+
+local function SetScaleConstant(value)
+    SCALE_CONST = value
+end
+
+return {
+    Enable = Enable,
+    Disable = Disable,
+    SetScaleConstant = SetScaleConstant
+}
