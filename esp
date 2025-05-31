@@ -3,7 +3,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 
-local BOX_COLOR = Color3.fromRGB(255, 0, 0)
+local BOX_COLOR = Color3.fromRGB(255, 0, 0) 
 local BOX_THICKNESS = 2
 local SCALE_CONST = 2000
 
