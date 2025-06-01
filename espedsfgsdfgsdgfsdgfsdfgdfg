@@ -41,31 +41,54 @@ local function removePlayer(plr)
     end
 end
 
-local function renderESP()
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= Players.LocalPlayer then
-            local char = plr.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            local box = getBox(plr)
-            if hrp and Camera then
-                local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-                if onScreen then
-                    local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
-                    local width = clamp(SCALE_CONST / dist, 50, 500)
-                    local height = clamp(width * 2, 100, 1000)
-                    box.Size = Vector2.new(width, height)
-                    box.Position = Vector2.new(screenPos.X - width / 2, screenPos.Y - height / 2)
-                    box.Visible = true
-                else
-                    box.Visible = false
-                end
+function AboveBox(box)
+local origin = Vector2.new(box.Position.X,box.Position.Y)
+local offset = Vector2.new(0, origin.Y-origin.Y/4)
+return offset
+end
+--other shit
+local nameText = Drawing.new("Text")
+nameText.Color = Color3.new(1, 1, 1) -- white
+nameText.Center = true
+nameText.Size = 16
+nameText.Visible = false
+--
+
+for _, plr in ipairs(Players:GetPlayers()) do
+    if plr ~= Players.LocalPlayer then
+        local char = plr.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local box = getBox(plr)
+        if hrp and Camera then
+            local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+            if onScreen then
+                local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
+                local width = clamp(SCALE_CONST / dist, 50, 500)
+                local height = clamp(width * 2, 100, 1000)
+                box.Size = Vector2.new(width, height)
+                box.Position = Vector2.new(screenPos.X - width / 2, screenPos.Y - height / 2)
+                box.Visible = true
+                
+                -- Use helper to get position above box
+                local textPos = AboveBox(box)
+                
+                -- Set text position and content
+                nameText.Position = textPos
+                nameText.Text = plr.Name
+                nameText.Visible = true
+                
             else
                 box.Visible = false
+                nameText.Visible = false
             end
+        else
+            box.Visible = false
+            nameText.Visible = false
         end
     end
 end
 
+--helper functions 
 local function Enable()
     for _, plr in ipairs(Players:GetPlayers()) do
         addPlayer(plr)
