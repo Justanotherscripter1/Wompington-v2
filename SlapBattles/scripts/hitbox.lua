@@ -11,13 +11,11 @@ local enabled = false
 local hitboxes = {}
 local debounce = {}
 
--- Rebind on respawn
 LocalPlayer.CharacterAdded:Connect(function(char)
     Character = char
     HRP = char:WaitForChild("HumanoidRootPart")
 end)
 
--- Get first tool in character or backpack
 local function getFirstTool()
     for _, tool in ipairs(Character:GetChildren()) do
         if tool:IsA("Tool") then return tool end
@@ -28,7 +26,6 @@ local function getFirstTool()
     return nil
 end
 
--- Get the slap RemoteEvent from ReplicatedStorage by tool name
 local function getSlapEvent(tool)
     if not tool then return nil end
     local name = tool.Name
@@ -44,7 +41,6 @@ local function getSlapEvent(tool)
     return nil
 end
 
--- Clean up hitbox for a player
 local function removeHitbox(plr)
     if hitboxes[plr] then
         hitboxes[plr]:Destroy()
@@ -53,7 +49,6 @@ local function removeHitbox(plr)
     end
 end
 
--- Create or update hitboxes on enemies
 local function updateHitboxes()
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
@@ -69,8 +64,8 @@ local function updateHitboxes()
                     hitbox.Name = "ExtendedHitbox"
                     hitbox.Anchored = true
                     hitbox.CanCollide = false
-                    hitbox.Transparency = 0.5
-                    hitbox.Material = Enum.Material.Neon
+                    hitbox.Transparency = 0.7   -- more see-through
+                    hitbox.Material = Enum.Material.SmoothPlastic  -- solid, not neon
                     hitbox.Color = Color3.fromRGB(0, 255, 0)
                     hitbox.Size = Vector3.new(size, size, size)
                     hitbox.Parent = hrp
@@ -108,42 +103,21 @@ local function updateHitboxes()
     end
 end
 
--- Visual range box around your character
-local visualRange = Instance.new("Part")
-visualRange.Name = "VisualHitboxRange"
-visualRange.Anchored = true
-visualRange.CanCollide = false
-visualRange.Transparency = 0.6
-visualRange.Material = Enum.Material.Neon
-visualRange.Color = Color3.fromRGB(0, 255, 0)
-visualRange.Size = Vector3.new(size * 2, size * 2, size * 2)
-visualRange.Parent = workspace
-
--- Update loop
 RunService.RenderStepped:Connect(function()
-    if HRP then
-        visualRange.CFrame = HRP.CFrame
-        visualRange.Size = Vector3.new(size * 2, size * 2, size * 2)
-        visualRange.Transparency = enabled and 0.6 or 1
-    end
-
     if enabled then
         updateHitboxes()
     else
-        -- Clean up all hitboxes
         for plr, hb in pairs(hitboxes) do
             removeHitbox(plr)
         end
     end
 end)
 
--- Exposed API for control
 local exposed = {}
 
 function exposed.setEnabled(state)
     enabled = state
     if not enabled then
-        visualRange.Transparency = 1
         for plr, hb in pairs(hitboxes) do
             removeHitbox(plr)
         end
@@ -152,8 +126,6 @@ end
 
 function exposed.setSize(newSize)
     size = newSize
-    visualRange.Size = Vector3.new(size * 2, size * 2, size * 2)
-    -- Resize all current hitboxes too
     for _, hb in pairs(hitboxes) do
         if hb and hb.Parent then
             hb.Size = Vector3.new(size, size, size)
