@@ -1,6 +1,3 @@
-local size = 5
-local enabled = false
-
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -9,11 +6,16 @@ local LP = Players.LocalPlayer
 local Character = LP.Character or LP.CharacterAdded:Wait()
 local HRP = Character:WaitForChild("HumanoidRootPart")
 
+local size = 5
+local enabled = false
+
+-- Rebind on respawn
 LP.CharacterAdded:Connect(function(char)
 	Character = char
 	HRP = char:WaitForChild("HumanoidRootPart")
 end)
 
+-- Get tool and remote event (from your previous code)
 local function getFirstTool()
 	for _, tool in ipairs(Character:GetChildren()) do
 		if tool:IsA("Tool") then return tool end
@@ -39,52 +41,105 @@ local function getSlapEvent(tool)
 	return nil
 end
 
--- Visualizer sphere
-local visual = Instance.new("Part")
-visual.Shape = Enum.PartType.Ball
-visual.Anchored = true
-visual.CanCollide = false
-visual.Transparency = 1 -- start hidden
-visual.Color = Color3.fromRGB(0, 255, 0)
-visual.Material = Enum.Material.Neon
-visual.Name = "SlapRangeVisual"
-visual.Size = Vector3.new(size * 2, size * 2, size * 2)
-visual.Parent = workspace
+-- Table to store hitboxes for cleanup
+local hitboxes = {}
 
-RunService.RenderStepped:Connect(function()
-	if not HRP then return end
-	visual.Position = HRP.Position
-	visual.Size = Vector3.new(size * 2, size * 2, size * 2)
-	visual.Transparency = enabled and 0.7 or 1
-	if not enabled then return end
-
+-- Create or update hitboxes on enemies
+local function updateHitboxes()
 	for _, plr in pairs(Players:GetPlayers()) do
 		if plr ~= LP and plr.Character then
 			local char = plr.Character
-			local enemyHRP = char:FindFirstChild("HumanoidRootPart")
+			local hrp = char:FindFirstChild("HumanoidRootPart")
 			local arena = char:FindFirstChild("isInArena")
 			local hum = char:FindFirstChild("Humanoid")
 
-			if enemyHRP and arena and arena.Value and hum and hum.Health > 0 then
-				local dist = (HRP.Position - enemyHRP.Position).Magnitude
-				if dist < size then
-					local tool = getFirstTool()
-					local evt = getSlapEvent(tool)
-					if evt then
-						evt:FireServer(enemyHRP)
-					end
+			if hrp and arena and arena.Value and hum and hum.Health > 0 then
+				local hitbox = hitboxes[plr]
+				if not hitbox or not hitbox.Parent then
+					hitbox = Instance.new("Part")
+					hitbox.Name = "ExtendedHitbox"
+					hitbox.Anchored = true
+					hitbox.CanCollide = false
+					hitbox.Transparency = 0.5
+					hitbox.Material = Enum.Material.Neon
+					hitbox.Color = Color3.new(0, 1, 0)
+					hitbox.Parent = hrp
+					hitboxes[plr] = hitbox
+
+					hitbox.Touched:Connect(function(hit)
+						if enabled and hit:IsDescendantOf(Character) then
+							local tool = getFirstTool()
+							local evt = getSlapEvent(tool)
+							if evt then
+								evt:FireServer(hrp)
+							end
+						end
+					end)
+				end
+				hitbox.Size = Vector3.new(size, size, size)
+				hitbox.CFrame = hrp.CFrame
+			else
+				-- Remove hitbox if player dead or out of arena
+				if hitboxes[plr] then
+					hitboxes[plr]:Destroy()
+					hitboxes[plr] = nil
 				end
 			end
 		end
 	end
+end
+
+-- Visual range box attached to your HRP (optional, can comment out)
+local visualRange = Instance.new("Part")
+visualRange.Name = "VisualHitboxRange"
+visualRange.Anchored = true
+visualRange.CanCollide = false
+visualRange.Transparency = 0.6
+visualRange.Material = Enum.Material.Neon
+visualRange.Color = Color3.new(0, 1, 0)
+visualRange.Size = Vector3.new(size * 2, size * 2, size * 2)
+visualRange.Parent = workspace
+
+-- Update visual range position and size
+RunService.RenderStepped:Connect(function()
+	if HRP then
+		visualRange.CFrame = HRP.CFrame
+		visualRange.Size = Vector3.new(size * 2, size * 2, size * 2)
+		visualRange.Transparency = enabled and 0.6 or 1
+	end
+	if enabled then
+		updateHitboxes()
+	else
+		-- cleanup all hitboxes when disabled
+		for plr, hb in pairs(hitboxes) do
+			if hb then hb:Destroy() end
+		end
+		hitboxes = {}
+	end
 end)
 
-return {
-	setEnabled = function(state)
-		enabled = state
-	end,
-	setSize = function(s)
-		size = s
-		visual.Size = Vector3.new(s * 2, s * 2, s * 2)
-	end,
-}
+-- Expose control functions
+local exposed = {}
+
+function exposed.setEnabled(state)
+	enabled = state
+	if not enabled then
+		-- hide visual and remove hitboxes immediately
+		visualRange.Transparency = 1
+		for plr, hb in pairs(hitboxes) do
+			if hb then hb:Destroy() end
+		end
+		hitboxes = {}
+	end
+end
+
+function exposed.setSize(newSize)
+	size = newSize
+	visualRange.Size = Vector3.new(size * 2, size * 2, size * 2)
+end
+
+function exposed.stateswap()
+	exposed.setEnabled(not enabled)
+end
+
+return exposed
