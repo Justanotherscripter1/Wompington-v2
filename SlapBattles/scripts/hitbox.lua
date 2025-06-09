@@ -9,13 +9,11 @@ local LP = Players.LocalPlayer
 local Character = LP.Character or LP.CharacterAdded:Wait()
 local HRP = Character:WaitForChild("HumanoidRootPart")
 
--- Respawn rebinder
 LP.CharacterAdded:Connect(function(char)
 	Character = char
 	HRP = char:WaitForChild("HumanoidRootPart")
 end)
 
--- Get current tool
 local function getFirstTool()
 	for _, tool in ipairs(Character:GetChildren()) do
 		if tool:IsA("Tool") then return tool end
@@ -26,7 +24,6 @@ local function getFirstTool()
 	return nil
 end
 
--- Get RemoteEvent based on tool
 local function getSlapEvent(tool)
 	if not tool then return nil end
 	local name = tool.Name
@@ -42,8 +39,23 @@ local function getSlapEvent(tool)
 	return nil
 end
 
--- Main runtime
+-- Visualizer sphere
+local visual = Instance.new("Part")
+visual.Shape = Enum.PartType.Ball
+visual.Anchored = true
+visual.CanCollide = false
+visual.Transparency = 1 -- start hidden
+visual.Color = Color3.fromRGB(0, 255, 0)
+visual.Material = Enum.Material.Neon
+visual.Name = "SlapRangeVisual"
+visual.Size = Vector3.new(size * 2, size * 2, size * 2)
+visual.Parent = workspace
+
 RunService.RenderStepped:Connect(function()
+	if not HRP then return end
+	visual.Position = HRP.Position
+	visual.Size = Vector3.new(size * 2, size * 2, size * 2)
+	visual.Transparency = enabled and 0.7 or 1
 	if not enabled then return end
 
 	for _, plr in pairs(Players:GetPlayers()) do
@@ -53,37 +65,13 @@ RunService.RenderStepped:Connect(function()
 			local arena = char:FindFirstChild("isInArena")
 			local hum = char:FindFirstChild("Humanoid")
 
-			if enemyHRP and arena and arena.Value == true and hum and hum.Health > 0 then
-				if not enemyHRP:FindFirstChild("SlapHitbox") then
-					local hitbox = Instance.new("Part")
-					hitbox.Name = "SlapHitbox"
-					hitbox.Size = Vector3.new(size, size, size)
-					hitbox.Transparency = 1
-					hitbox.Anchored = true
-					hitbox.CanCollide = false
-					hitbox.CFrame = enemyHRP.CFrame
-					hitbox.Parent = enemyHRP
-					hitbox.Transparency = 0.5  -- semi-transparent
-					hitbox.Material = Enum.Material.Neon
-					hitbox.Color = Color3.new(1, 0, 0)  -- red
-
-
-					hitbox.Touched:Connect(function(hit)
-						if not enabled then return end
-						if hit:IsDescendantOf(Character) then
-							local tool = getFirstTool()
-							local evt = getSlapEvent(tool)
-							if evt then
-								evt:FireServer(enemyHRP)
-							end
-						end
-					end)
-				else
-					-- Sync position and size if needed
-					local hitbox = enemyHRP:FindFirstChild("SlapHitbox")
-					hitbox.CFrame = enemyHRP.CFrame
-					if hitbox.Size.X ~= size then
-						hitbox.Size = Vector3.new(size, size, size)
+			if enemyHRP and arena and arena.Value and hum and hum.Health > 0 then
+				local dist = (HRP.Position - enemyHRP.Position).Magnitude
+				if dist < size then
+					local tool = getFirstTool()
+					local evt = getSlapEvent(tool)
+					if evt then
+						evt:FireServer(enemyHRP)
 					end
 				end
 			end
@@ -91,19 +79,12 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
--- Exposed API
-local module = {}
-
-function module.setEnabled(state)
-	enabled = state
-end
-
-function module.setSize(newSize)
-	size = newSize
-end
-
-function module.stateswap()
-	enabled = not enabled
-end
-
-return module
+return {
+	setEnabled = function(state)
+		enabled = state
+	end,
+	setSize = function(s)
+		size = s
+		visual.Size = Vector3.new(s * 2, s * 2, s * 2)
+	end,
+}
