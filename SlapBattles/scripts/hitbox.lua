@@ -63,6 +63,10 @@ RunService.RenderStepped:Connect(function()
 					hitbox.CanCollide = false
 					hitbox.CFrame = enemyHRP.CFrame
 					hitbox.Parent = enemyHRP
+					hitbox.Transparency = 0.5  -- semi-transparent
+					hitbox.Material = Enum.Material.Neon
+					hitbox.Color = Color3.new(1, 0, 0)  -- red
+
 
 					hitbox.Touched:Connect(function(hit)
 						if not enabled then return end
