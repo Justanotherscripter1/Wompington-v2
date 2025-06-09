@@ -88,9 +88,19 @@ task.spawn(function()
 	end
 end)
 
+function setEnabled(state)
+    enabled = state
+end
+
+
+
 function stateswap()
     enabled = not enabled
 end
-exposed = {stateswap = stateswap()}
+exposed = {
+    stateswap = stateswap,
+    setEnabled = setEnabled
+}
+return exposed
 
 return exposed
