@@ -5,26 +5,24 @@ local LocalPlayer = Players.LocalPlayer
 local mouse = LocalPlayer:GetMouse()
 local cam = workspace.CurrentCamera
 -- Force scriptable camera
-    cam.CameraType = Enum.CameraType.Scriptable
+cam.CameraType = Enum.CameraType.Scriptable
 -- UI libs & notifications
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
-local AkaliNotif = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kinlei/Dynissimo/main/Scripts/AkaliNotif.lua"))()
-local Notify = AkaliNotif.Notify
 
 -- Check game
 local placeId = game.PlaceId
 if placeId ~= 5698907818 and placeId ~= 15697416464 then
-    Notify({
-        Description = "JOIN RE:Infected - https://www.roblox.com/share?code=483b9527dc973449936322ba0c294856&type=ExperienceDetails&stamp=1749428858358",
+    WindUI:Notify({
         Title = "INCORRECT GAME",
+        Content = "JOIN RE:Infected - https://www.roblox.com/share?code=483b9527dc973449936322ba0c294856&type=ExperienceDetails&stamp=1749428858358",
         Duration = 5,
     })
     return
 end
 if placeId ~= 15697416464 then
-    Notify({
-        Description = "Try again in a server.",
+    WindUI:Notify({
         Title = "Join a server.",
+        Content = "Try again in a server.",
         Duration = 5,
     })
     return 
@@ -211,25 +209,25 @@ local function refreshAimlockState()
     if LocalPlayer.Team and LocalPlayer.Team.Name == "Zombies" then
         if aimlockEnabled then
             aimlockEnabled = false
-            Notify({
+            WindUI:Notify({
                 Title = "No Aimlock",
-                Description = "You're a zombie. Aimlock disabled.",
+                Content = "You're a zombie. Aimlock disabled.",
                 Duration = 4,
             })
         end
     else
         if userEnabled and not aimlockEnabled then
             aimlockEnabled = true
-            Notify({
+            WindUI:Notify({
                 Title = "Aimlock On",
-                Description = "Tracking hostile undeads.",
+                Content = "Tracking hostile undeads.",
                 Duration = 4,
             })
         elseif not userEnabled and aimlockEnabled then
             aimlockEnabled = false
-            Notify({
+            WindUI:Notify({
                 Title = "Aimlock Off",
-                Description = "Aimlock disabled by user.",
+                Content = "Aimlock disabled by user.",
                 Duration = 4,
             })
         end
@@ -279,8 +277,6 @@ RS.RenderStepped:Connect(function()
     end
 end)
 
-
-
 -- Aimlock toggle UI
 CMBT:Toggle({
     Title = "Aimlock",
@@ -300,14 +296,9 @@ LocalPlayer.CharacterAdded:Connect(function()
     refreshAimlockState()
 end)
 
-
-
----here is where i put all the Renderstepped spam, until it gets moved
-
-
--- Notify script loaded
-Notify({
-    Title = "Script loaded | RE:Infected",
-    Description = "Enjoy the script <3",
+-- Notification example
+WindUI:Notify({
+    Title = "Notification Example 1",
+    Content = "Content",
     Duration = 5,
 })
