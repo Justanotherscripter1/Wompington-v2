@@ -1,4 +1,3 @@
--- ESP Module
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
@@ -8,117 +7,127 @@ local BOX_THICKNESS = 2
 local SCALE_CONST = 2000
 
 local boxes = {}
+local nameTexts = {}
 local connection
 
 local function newBox()
-    local box = Drawing.new("Square")
-    box.Visible = false
-    box.Color = BOX_COLOR
-    box.Thickness = BOX_THICKNESS
-    box.Filled = false
-    return box
+	local box = Drawing.new("Square")
+	box.Visible = false
+	box.Color = BOX_COLOR
+	box.Thickness = BOX_THICKNESS
+	box.Filled = false
+	return box
+end
+
+local function newNameText()
+	local text = Drawing.new("Text")
+	text.Color = Color3.new(1, 1, 1)
+	text.Center = true
+	text.Size = 16
+	text.Visible = false
+	return text
 end
 
 local function getBox(plr)
-    boxes[plr] = boxes[plr] or newBox()
-    return boxes[plr]
+	boxes[plr] = boxes[plr] or newBox()
+	return boxes[plr]
+end
+
+local function getNameText(plr)
+	nameTexts[plr] = nameTexts[plr] or newNameText()
+	return nameTexts[plr]
 end
 
 local function clamp(v, mi, ma)
-    return v < mi and mi or (v > ma and ma or v)
+	return v < mi and mi or (v > ma and ma or v)
 end
 
 local function addPlayer(plr)
-    if plr ~= Players.LocalPlayer and not boxes[plr] then
-        boxes[plr] = newBox()
-    end
+	if plr ~= Players.LocalPlayer then
+		getBox(plr)
+		getNameText(plr)
+	end
 end
 
 local function removePlayer(plr)
-    if boxes[plr] then
-        boxes[plr]:Remove()
-        boxes[plr] = nil
-    end
+	if boxes[plr] then
+		boxes[plr]:Remove()
+		boxes[plr] = nil
+	end
+	if nameTexts[plr] then
+		nameTexts[plr]:Remove()
+		nameTexts[plr] = nil
+	end
 end
 
-function AboveBox(box)
-local origin = Vector2.new(box.Position.X,box.Position.Y)
-local offset = Vector2.new(0, origin.Y-origin.Y/4)
-return offset
-end
---other shit
-local nameText = Drawing.new("Text")
-nameText.Color = Color3.new(1, 1, 1) -- white
-nameText.Center = true
-nameText.Size = 16
-nameText.Visible = false
---
+-- 🧠 Renders everything per frame
+local function renderESP()
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= Players.LocalPlayer then
+			local char = plr.Character
+			local hrp = char and char:FindFirstChild("HumanoidRootPart")
+			local box = getBox(plr)
+			local nameText = getNameText(plr)
 
-for _, plr in ipairs(Players:GetPlayers()) do
-    if plr ~= Players.LocalPlayer then
-        local char = plr.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local box = getBox(plr)
-        if hrp and Camera then
-            local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-            if onScreen then
-                local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
-                local width = clamp(SCALE_CONST / dist, 50, 500)
-                local height = clamp(width * 2, 100, 1000)
-                box.Size = Vector2.new(width, height)
-                box.Position = Vector2.new(screenPos.X - width / 2, screenPos.Y - height / 2)
-                box.Visible = true
-                
-                -- Use helper to get position above box
-                local textPos = AboveBox(box)
-                
-                -- Set text position and content
-                nameText.Position = textPos
-                nameText.Text = plr.Name
-                nameText.Visible = true
-                
-            else
-                box.Visible = false
-                nameText.Visible = false
-            end
-        else
-            box.Visible = false
-            nameText.Visible = false
-        end
-    end
+			if hrp and Camera then
+				local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+				if onScreen then
+					local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
+					local width = clamp(SCALE_CONST / dist, 50, 500)
+					local height = clamp(width * 2, 100, 1000)
+					box.Size = Vector2.new(width, height)
+					box.Position = Vector2.new(screenPos.X - width / 2, screenPos.Y - height / 2)
+					box.Visible = true
+
+					nameText.Position = Vector2.new(screenPos.X, screenPos.Y - height / 2 - 18)
+					nameText.Text = plr.Name
+					nameText.Visible = true
+				else
+					box.Visible = false
+					nameText.Visible = false
+				end
+			else
+				box.Visible = false
+				nameText.Visible = false
+			end
+		end
+	end
 end
 
---helper functions 
+-- 💾 API
 local function Enable()
-    for _, plr in ipairs(Players:GetPlayers()) do
-        addPlayer(plr)
-    end
-    Players.PlayerAdded:Connect(addPlayer)
-    Players.PlayerRemoving:Connect(removePlayer)
-    connection = RunService.RenderStepped:Connect(renderESP)
+	for _, plr in ipairs(Players:GetPlayers()) do
+		addPlayer(plr)
+	end
+	Players.PlayerAdded:Connect(addPlayer)
+	Players.PlayerRemoving:Connect(removePlayer)
+	connection = RunService.RenderStepped:Connect(renderESP)
 end
 
 local function Disable()
-    if connection then
-        connection:Disconnect()
-        connection = nil
-    end
-    for _, box in pairs(boxes) do
-        box:Remove()
-    end
-    boxes = {}
+	if connection then
+		connection:Disconnect()
+		connection = nil
+	end
+	for _, box in pairs(boxes) do
+		box:Remove()
+	end
+	for _, text in pairs(nameTexts) do
+		text:Remove()
+	end
+	boxes = {}
+	nameTexts = {}
 end
 
 local function SetColor(color)
-    BOX_COLOR = color
-    for _, box in pairs(boxes) do
-        box.Color = BOX_COLOR
-    end
+	BOX_COLOR = color
+	for _, box in pairs(boxes) do
+		box.Color = BOX_COLOR
+	end
 end
 
-
 return {
-    Enable = Enable,
-    Disable = Disable,
-    SetColor = SetColor
+	Enable = Enable,
+	Disable = Disable,
+	SetColor = SetColor
 }
