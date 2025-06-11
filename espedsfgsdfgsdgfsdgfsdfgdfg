@@ -4,11 +4,15 @@ local Camera = workspace.CurrentCamera
 
 local BOX_COLOR = Color3.fromRGB(255, 0, 0) 
 local BOX_THICKNESS = 2
-local SCALE_CONST = 2000
 
 local boxes = {}
 local nameTexts = {}
 local connection
+
+local MIN_WIDTH = 30
+local MAX_WIDTH = 150
+local MIN_HEIGHT = 60
+local MAX_HEIGHT = 200
 
 local function newBox()
 	local box = Drawing.new("Square")
@@ -60,7 +64,6 @@ local function removePlayer(plr)
 	end
 end
 
--- 🧠 Renders everything per frame
 local function renderESP()
 	for _, plr in ipairs(Players:GetPlayers()) do
 		if plr ~= Players.LocalPlayer then
@@ -73,8 +76,11 @@ local function renderESP()
 				local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
 				if onScreen then
 					local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
-					local width = clamp(SCALE_CONST / dist, 50, 500)
-					local height = clamp(width * 2, 100, 1000)
+
+					-- Bigger when closer, smaller when farther
+					local width = clamp(MAX_WIDTH - (dist / 10), MIN_WIDTH, MAX_WIDTH)
+					local height = clamp(MAX_HEIGHT - (dist / 10), MIN_HEIGHT, MAX_HEIGHT)
+
 					box.Size = Vector2.new(width, height)
 					box.Position = Vector2.new(screenPos.X - width / 2, screenPos.Y - height / 2)
 					box.Visible = true
@@ -94,7 +100,6 @@ local function renderESP()
 	end
 end
 
--- 💾 API
 local function Enable()
 	for _, plr in ipairs(Players:GetPlayers()) do
 		addPlayer(plr)
