@@ -3,7 +3,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 -- Your external modules
 local scripts = {
     SilentAura = loadstring(game:HttpGet("https://raw.githubusercontent.com/Justanotherscripter1/Wompington-v2/refs/heads/individuals/SlapBattles/scripts/SilentAura.Lua"))(),
-    Hitbox = loadstring(game:HttpGeZt("https://raw.githubusercontent.com/Justanotherscripter1/Wompington-v2/individuals/SlapBattles/scripts/hitbox.lua"))(),
+    Hitbox = loadstring(game:HttpGet("https://raw.githubusercontent.com/Justanotherscripter1/Wompington-v2/individuals/SlapBattles/scripts/hitbox.lua"))(),
 }
 
 -- WindUI config
