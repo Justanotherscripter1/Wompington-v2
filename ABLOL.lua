@@ -14,9 +14,22 @@ local minDistance = 0
 local maxDistance = 1000
 local maxFOV = 30 -- degrees
 
-local function vector3ToScreenPos(pos)
-    local screenPos, onScreen = Camera:WorldToViewportPoint(pos)
-    return Vector2.new(screenPos.X, screenPos.Y), onScreen
+-- Drawing FOV Circle setup
+local fovCircle = Drawing.new("Circle")
+fovCircle.Color = Color3.new(1, 1, 1) -- white circle
+fovCircle.Thickness = 1
+fovCircle.Filled = false
+fovCircle.NumSides = 64
+fovCircle.Visible = false -- start hidden
+
+local function updateFOVCircle()
+    local mousePos = UserInputService:GetMouseLocation()
+    local cameraFOV = Camera.FieldOfView -- usually 70
+    local screenHeight = Camera.ViewportSize.Y
+    local radiusPixels = (maxFOV / cameraFOV) * (screenHeight / 2)
+
+    fovCircle.Position = Vector2.new(mousePos.X, mousePos.Y)
+    fovCircle.Radius = radiusPixels
 end
 
 local function getClosestTarget()
@@ -61,10 +74,13 @@ local function getClosestTarget()
 end
 
 local connection
+local renderConnection
 
 function Aimbot.Enable()
     if connection then return end
     enabled = true
+
+    -- Aim update
     connection = RunService.RenderStepped:Connect(function(dt)
         if not enabled then return end
         local target = getClosestTarget()
@@ -76,6 +92,16 @@ function Aimbot.Enable()
             Camera.CFrame = cameraCFrame:Lerp(targetCFrame, math.clamp(snapSpeed * dt, 0, 1))
         end
     end)
+
+    -- FOV circle update
+    renderConnection = RunService.RenderStepped:Connect(function()
+        if enabled then
+            updateFOVCircle()
+            fovCircle.Visible = true
+        else
+            fovCircle.Visible = false
+        end
+    end)
 end
 
 function Aimbot.Disable()
@@ -83,7 +109,12 @@ function Aimbot.Disable()
         connection:Disconnect()
         connection = nil
     end
+    if renderConnection then
+        renderConnection:Disconnect()
+        renderConnection = nil
+    end
     enabled = false
+    fovCircle.Visible = false
 end
 
 function Aimbot.SetTargetPart(partName)
@@ -102,7 +133,6 @@ function Aimbot.SetSnapSpeed(speed)
     end
 end
 
--- New exposed setters:
 function Aimbot.SetMinDistance(value)
     if type(value) == "number" and value >= 0 then
         minDistance = value
@@ -125,6 +155,14 @@ function Aimbot.SetMaxFOV(value)
     else
         warn("Max FOV must be a non-negative number.")
     end
+end
+
+function Aimbot.IsEnabled()
+    return enabled
+end
+
+function Aimbot.GetMaxFOV()
+    return maxFOV
 end
 
 return Aimbot
