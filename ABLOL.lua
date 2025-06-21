@@ -5,17 +5,26 @@ local Camera = workspace.CurrentCamera
 
 local Aimbot = {}
 
--- Settings
+-- Settings with defaults
 local enabled = false
-local targetPartName = "Head" -- or "Torso"
-local snapSpeed = 10 -- higher = faster snap, recommended 5-20
+local targetPartName = "Head"
+local snapSpeed = 10
 
--- Helper to get closest target in FOV (simple distance to mouse)
+local minDistance = 0
+local maxDistance = 1000
+local maxFOV = 30 -- degrees
+
+local function vector3ToScreenPos(pos)
+    local screenPos, onScreen = Camera:WorldToViewportPoint(pos)
+    return Vector2.new(screenPos.X, screenPos.Y), onScreen
+end
+
 local function getClosestTarget()
-    local closestPlayer = nil
-    local closestDist = math.huge
+    local closestTarget = nil
+    local closestDistToMouse = math.huge
 
     local mousePos = UserInputService:GetMouseLocation()
+    local cameraPos = Camera.CFrame.Position
 
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= Players.LocalPlayer then
@@ -23,12 +32,24 @@ local function getClosestTarget()
             if char then
                 local targetPart = char:FindFirstChild(targetPartName)
                 if targetPart then
-                    local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-                    if onScreen then
-                        local distToMouse = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(mousePos.X, mousePos.Y)).Magnitude
-                        if distToMouse < closestDist then
-                            closestDist = distToMouse
-                            closestPlayer = targetPart
+                    local dist = (targetPart.Position - cameraPos).Magnitude
+
+                    -- Distance checks
+                    if dist >= minDistance and dist <= maxDistance then
+                        local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+                        if onScreen then
+                            local dirToTarget = (targetPart.Position - cameraPos).Unit
+                            local cameraLook = Camera.CFrame.LookVector
+                            local angle = math.deg(math.acos(cameraLook:Dot(dirToTarget)))
+
+                            -- Check if within FOV
+                            if angle <= maxFOV then
+                                local distToMouse = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(mousePos.X, mousePos.Y)).Magnitude
+                                if distToMouse < closestDistToMouse then
+                                    closestDistToMouse = distToMouse
+                                    closestTarget = targetPart
+                                end
+                            end
                         end
                     end
                 end
@@ -36,7 +57,7 @@ local function getClosestTarget()
         end
     end
 
-    return closestPlayer
+    return closestTarget
 end
 
 local connection
@@ -52,7 +73,6 @@ function Aimbot.Enable()
             local direction = (target.Position - cameraCFrame.Position).Unit
             local targetCFrame = CFrame.new(cameraCFrame.Position, cameraCFrame.Position + direction)
 
-            -- Smoothly interpolate camera CFrame towards target
             Camera.CFrame = cameraCFrame:Lerp(targetCFrame, math.clamp(snapSpeed * dt, 0, 1))
         end
     end)
@@ -79,6 +99,31 @@ function Aimbot.SetSnapSpeed(speed)
         snapSpeed = speed
     else
         warn("Snap speed must be a positive number.")
+    end
+end
+
+-- New exposed setters:
+function Aimbot.SetMinDistance(value)
+    if type(value) == "number" and value >= 0 then
+        minDistance = value
+    else
+        warn("Min distance must be a non-negative number.")
+    end
+end
+
+function Aimbot.SetMaxDistance(value)
+    if type(value) == "number" and value >= minDistance then
+        maxDistance = value
+    else
+        warn("Max distance must be >= min distance.")
+    end
+end
+
+function Aimbot.SetMaxFOV(value)
+    if type(value) == "number" and value >= 0 then
+        maxFOV = value
+    else
+        warn("Max FOV must be a non-negative number.")
     end
 end
 
