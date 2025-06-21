@@ -9,10 +9,10 @@ local boxes = {}
 local nameTexts = {}
 local connection
 
-local MIN_WIDTH = 30
-local MAX_WIDTH = 150
-local MIN_HEIGHT = 60
-local MAX_HEIGHT = 200
+local MIN_WIDTH = 10
+local MAX_WIDTH = 60
+local MIN_HEIGHT = 20
+local MAX_HEIGHT = 100
 
 -- Clamp helper
 local function clamp(v, mi, ma)
