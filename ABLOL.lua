@@ -12,6 +12,7 @@ local snapSpeed = 10
 local minDistance = 0
 local maxDistance = 1000
 local maxFOV = 30
+local ignoreTeam = true
 
 -- FOV circle setup
 local fovCircle = Drawing.new("Circle")
@@ -29,7 +30,7 @@ local function getClosestTarget()
 	local mousePos = UserInputService:GetMouseLocation()
 
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= Players.LocalPlayer and plr.Character and plr.Character:FindFirstChild(targetPart) then
+		if plr ~= Players.LocalPlayer and plr.Character and plr.Character:FindFirstChild(targetPart) and (not ignoreTeam or plr.Team ~= Players.LocalPlayer.Team) then
 			local part = plr.Character[targetPart]
 			local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
 			if onScreen then
@@ -117,5 +118,10 @@ end
 function Aimbot.GetMaxFOV()
 	return maxFOV
 end
+
+function Aimbot.SetIgnoreTeam(bool)
+	ignoreTeam = bool and true or false
+end
+
 
 return Aimbot
