@@ -13,6 +13,7 @@ local minDistance = 0
 local maxDistance = 1000
 local maxFOV = 30
 local ignoreTeam = true
+local VisibilityMode = "Visible Only" -- default
 
 -- FOV circle setup
 local fovCircle = Drawing.new("Circle")
@@ -23,7 +24,19 @@ fovCircle.NumSides = 64
 fovCircle.Radius = 60
 fovCircle.Visible = false
 
+-- RaycastParams for visibility checks
+local rayParams = RaycastParams.new()
+rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+rayParams.IgnoreWater = true
+
 -- Helpers
+local function isVisible(part)
+	if not part then return false end
+	rayParams.FilterDescendantsInstances = {Players.LocalPlayer.Character}
+	local result = workspace:Raycast(Camera.CFrame.Position, (part.Position - Camera.CFrame.Position).Unit * 9999, rayParams)
+	return result and result.Instance and result.Instance:IsDescendantOf(part.Parent)
+end
+
 local function getClosestTarget()
 	local closest = nil
 	local shortestAngle = math.huge
@@ -36,6 +49,10 @@ local function getClosestTarget()
 			if onScreen then
 				local dist = (Camera.CFrame.Position - part.Position).Magnitude
 				if dist >= minDistance and dist <= maxDistance then
+					if VisibilityMode == "Visible Only" and not isVisible(part) then
+						continue -- skip if not visible
+					end
+
 					local fov = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(mousePos.X, mousePos.Y)).Magnitude
 					local screenFOV = (maxFOV / Camera.FieldOfView) * (Camera.ViewportSize.Y / 2)
 					if fov <= screenFOV and fov < shortestAngle then
@@ -110,6 +127,16 @@ function Aimbot.SetMaxFOV(fov)
 	maxFOV = tonumber(fov) or 30
 end
 
+function Aimbot.SetIgnoreTeam(bool)
+	ignoreTeam = bool and true or false
+end
+
+function Aimbot.SetVisibilityMode(mode)
+	if mode == "Visible Only" or mode == "Ignore Visibility" then
+		VisibilityMode = mode
+	end
+end
+
 -- Getters
 function Aimbot.IsEnabled()
 	return enabled
@@ -118,10 +145,5 @@ end
 function Aimbot.GetMaxFOV()
 	return maxFOV
 end
-
-function Aimbot.SetIgnoreTeam(bool)
-	ignoreTeam = bool and true or false
-end
-
 
 return Aimbot
