@@ -14,6 +14,8 @@ local maxDistance = 1000
 local maxFOV = 30
 local ignoreTeam = true
 local VisibilityMode = "Visible Only" -- default
+local ignoreForceFields = false -- new flag
+
 
 -- FOV circle setup
 local fovCircle = Drawing.new("Circle")
@@ -44,6 +46,10 @@ local function getClosestTarget()
 
 	for _, plr in ipairs(Players:GetPlayers()) do
 		if plr ~= Players.LocalPlayer and plr.Character and plr.Character:FindFirstChild(targetPart) and (not ignoreTeam or plr.Team ~= Players.LocalPlayer.Team) then
+			if ignoreForceFields and plr.Character:FindFirstChildOfClass("ForceField") then
+				continue -- skip protected players
+			end
+
 			local part = plr.Character[targetPart]
 			local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
 			if onScreen then
@@ -145,5 +151,10 @@ end
 function Aimbot.GetMaxFOV()
 	return maxFOV
 end
+
+function Aimbot.SetIgnoreForceFields(state)
+	ignoreForceFields = state and true or false
+end
+
 
 return Aimbot
