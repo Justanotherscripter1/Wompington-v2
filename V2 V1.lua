@@ -17,7 +17,7 @@ WindUI:SetTheme("Dark")
 local Window = WindUI:CreateWindow({
     Title = "Wompington Universal | Reforged",
     Icon = "cat",
-    Author = "@stardestroyer89 on discord | version 1 | release 1",
+    Author = "@stardestroyer89 on discord | version 1 | private",
     Folder = "WOMPUNIREWRITE",
     Size = UDim2.fromOffset(580, 460),
     Transparent = false, -- keep false for visibility
@@ -25,7 +25,36 @@ local Window = WindUI:CreateWindow({
     SideBarWidth = 200,
     Background = "0", -- you can add a background image if needed
 })
+
+local Notice = Window:Dialog({
+    Icon = "droplet",
+    Title = "THI SCRIPT WAS MADE ON HYDROGEN",
+    Content = "this Script was made on Hydrogen, for hydrogen, for more info on hydrogen executor visit hydrogen.lat in your browser.",
+    Buttons = {
+        {
+            Title = "Confirm",
+            Callback = function()
+                Notice:Close()
+            end,
+        }
+    },
+})
+
 Window:SetToggleKey(Enum.KeyCode.RightShift)
+Window:CreateTopbarButton("EXPLOIT: HYDROGEN", "droplet",  function() local Notice = Window:Dialog({
+    Icon = "droplet",
+    Title = "THI SCRIPT WAS MADE ON HYDROGEN",
+    Content = "this Script was made on Hydrogen, for hydrogen, for more info on hydrogen executor visit hydrogen.lat in your browser.",
+    Buttons = {
+        {
+            Title = "Confirm",
+            Callback = function()
+                Notice:Close()
+            end,
+        }
+    },
+}) end,  989)
+
 -- Create a dashboard tab
 local Dashboard = Window:Tab({
     Title = "Dashboard",
@@ -119,8 +148,8 @@ AimbotTab:Toggle({
 AimbotTab:Dropdown({
     Title = "Target Part",
     Desc = "Choose where to aim",
-    Values = {"Head", "Torso"},  
-    Value = "Head",              
+    Values = {"Head", "Torso"},  -- <-- use Values here
+    Value = "Head",              -- default selected option
     Callback = function(option)
         Aimbot.SetTargetPart(option)
     end
