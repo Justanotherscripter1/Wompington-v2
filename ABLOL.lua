@@ -45,7 +45,7 @@ local function getClosestTarget()
 	local mousePos = UserInputService:GetMouseLocation()
 
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= Players.LocalPlayer and plr.Character and plr.Character:FindFirstChild(targetPart) and (not ignoreTeam or plr.Team ~= Players.LocalPlayer.Team) then
+		if plr ~= Players.LocalPlayer and plr.Character and plr.Character:FindFirstChild(targetPart) and (not ignoreTeam or plr.Team ~= Players.LocalPlayer.Team) and plr.Character.Humanoid.Health > 0 then
 			if ignoreForceFields and plr.Character:FindFirstChildOfClass("ForceField") then
 				continue -- skip protected players
 			end
