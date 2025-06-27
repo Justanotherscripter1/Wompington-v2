@@ -1,9 +1,18 @@
+--[[
+>sirius.menu/sense
+>yoink.png
+update
+]]
+
+
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 
 local BOX_COLOR = Color3.fromRGB(255, 0, 0)
 local BOX_THICKNESS = 2
+local tracers = {}
 
 local boxes = {}
 local nameTexts = {}
@@ -14,10 +23,48 @@ local MAX_WIDTH = 60
 local MIN_HEIGHT = 20
 local MAX_HEIGHT = 100
 
+local function getTracer(plr)
+    tracers[plr] = tracers[plr] or Drawing.new("Line")
+    return tracers[plr]
+end
+
+
 -- Clamp helper
 local function clamp(v, mi, ma)
     return v < mi and mi or (v > ma and ma or v)
 end
+
+local camera = workspace.CurrentCamera
+local mouse = game.Players.LocalPlayer:GetMouse()
+
+local function GetScreenPos(part)
+	local pos, visible = camera:WorldToViewportPoint(part.Position)
+	return Vector2.new(pos.X, pos.Y), visible
+end
+
+local function MakeLine(from, to, color)
+	local line = Drawing.new("Line")
+	line.From = from
+	line.To = to
+	line.Color = color or Color3.new(1, 0, 0)
+	line.Thickness = 1
+	line.Transparency = 1
+	line.ZIndex = 2
+	line.Visible = true
+	return line
+end
+
+-- example use: make a line from mouse to enemy's HumanoidRootPart
+local function TracerToEnemy(target)
+	if not target:FindFirstChild("HumanoidRootPart") then return end
+
+	local screenPos, onScreen = GetScreenPos(target.HumanoidRootPart)
+	if onScreen then
+		local mousePos = Vector2.new(mouse.X, mouse.Y)
+		local line = MakeLine(mousePos, screenPos)
+	end
+end
+
 
 -- New box and name text creators
 local function newBox()
@@ -79,6 +126,11 @@ local function removePlayer(plr)
         nameTexts[plr]:Remove()
         nameTexts[plr] = nil
     end
+if tracers[plr] then
+    tracers[plr]:Remove()
+    tracers[plr] = nil
+end
+
 end
 
 local function renderESP()
@@ -104,7 +156,19 @@ local function renderESP()
                     nameText.Position = Vector2.new(screenPos.X, screenPos.Y - height / 2 - 18)
                     nameText.Text = plr.Name
                     nameText.Visible = true
+                    local tracer = getTracer(plr)
+tracer.From = Vector2.new(mouse.X, mouse.Y)
+tracer.To = Vector2.new(screenPos.X, screenPos.Y)
+tracer.Color = Color3.new(1, 0, 0)
+tracer.Thickness = 1
+tracer.Transparency = 1
+tracer.ZIndex = 1
+tracer.Visible = true
+
                 else
+local tracer = getTracer(plr)
+tracer.Visible = false
+
                     box.Visible = false
                     nameText.Visible = false
                 end
@@ -136,6 +200,11 @@ local function Disable()
     for _, text in pairs(nameTexts) do
         text:Remove()
     end
+for _, tracer in pairs(tracers) do
+    tracer:Remove()
+end
+tracers = {}
+
     boxes = {}
     nameTexts = {}
 end
